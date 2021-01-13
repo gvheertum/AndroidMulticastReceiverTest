@@ -2,7 +2,6 @@ package com.gvh.gvhmulticasttest;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.content.ContentResolver;
 import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -13,16 +12,14 @@ import android.os.Bundle;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import android.util.Log;
 import android.view.View;
 
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,33 +28,44 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+
+    public MulticastChannelClientFactory _clientFactory = new MulticastChannelClientFactory();
 
     public static final String TAG = "OCG";
     TextView tv = null;
     TextView tvReceivedContent = null;
     @Override
+    @RequiresApi(api = Build.VERSION_CODES.N)
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        FloatingActionButton fab = findViewById(R.id.fab);
+        FloatingActionButton fabListen = findViewById(R.id.fabObserve);
+        FloatingActionButton fabTestMode = findViewById(R.id.fabTestMode);
         tvReceivedContent = findViewById(R.id.tvReceived);
         tv = findViewById(R.id.tvMcDetail);
         tv.setText("Click the button to start MC retrieve");
         createNotificationChannel();
-        StartMCChannel(null);
 
-        fab.setOnClickListener(new View.OnClickListener() {
+        fabListen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 StartMCChannel(view);
             }
         });
+
+        fabTestMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                StartTestMode(view);
+            }
+        });
     }
 
-
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void StartMCChannel(View view)
     {
         if(view != null) {
@@ -67,6 +75,15 @@ public class MainActivity extends AppCompatActivity {
         StartReceiver();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void StartTestMode(View view)
+    {
+        if(view != null) {
+            Snackbar.make(view, "Starting test mode", Snackbar.LENGTH_LONG).show();
+        }
+        Log.d(TAG, "Starting receiver from button press");
+        StartReceiver();
+    }
 
     private final String CHANNEL_ID = "OCCChan";
     private void createNotificationChannel() {
@@ -102,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
     private final String MCAddressRf = "236.99.250.121";
     private final String MCAddressGeneral = "236.99.250.120";
     private final int MCPort = 30011;
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void StartReceiver()
     {
         StartListeningForMCTraffic(MCAddressRf, MCPort);
@@ -109,48 +127,11 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> tv.setText("!! Started MC retrieve on: " + MCAddressRf + " and " + MCAddressGeneral + "on port:" + MCPort));
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void StartListeningForMCTraffic(String ip, int port)
     {
-        new Thread() {
-            public void run() {
-                MulticastSocket socket = null;
-                InetAddress group = null;
-
-                try
-                {
-                    socket = new MulticastSocket(port);
-                    group = InetAddress.getByName(ip);
-                    socket.joinGroup(group);
-
-                    DatagramPacket packet;
-                    while (true){
-                        byte[] buf = new byte[256];
-                        packet = new DatagramPacket(buf, buf.length);
-                        socket.receive(packet);
-                        Log.d(TAG, "Received message on:" + ip + ":" + port);
-                        String str = new String(buf, StandardCharsets.UTF_8).substring(0, packet.getLength());
-                        runOnUiThread(() -> ProcessMulticastMessage(ip, port, str));
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.d(TAG, e.getMessage());
-                } finally {
-                    if (socket != null) {
-                        try {
-                            if (group != null) {
-                                socket.leaveGroup(group);
-                            }
-                            socket.close();
-                        }
-                        catch(IOException e) {
-                            Log.d(TAG, e.getMessage());
-                        }
-                    }
-                    Log.d(TAG, "MC Thread dead yo!");
-                    runOnUiThread(() -> AppendMCMessage("Failed MC retrieve on: " + port + ":" + port + ", Please restart!"));
-                }
-            }
-        }.start();
+        MulticastChannelClient client = _clientFactory.GetClient(ip, port);
+        client.StartReceiver((m) -> { runOnUiThread(() -> ProcessMulticastMessage(ip, port, m)); return "DONE"; } );
     }
 
 
