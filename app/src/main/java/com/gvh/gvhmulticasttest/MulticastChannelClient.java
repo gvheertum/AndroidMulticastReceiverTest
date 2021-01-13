@@ -54,7 +54,6 @@ public class MulticastChannelClient {
                         Log.d(TAG, "Received message on:" + _ip + ":" + _port);
                         String str = new String(buf, StandardCharsets.UTF_8).substring(0, packet.getLength());
                         messageReceiveHandler.apply(str);
-                        //runOnUiThread(() -> ProcessMulticastMessage(ip, port, str));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -85,8 +84,47 @@ public class MulticastChannelClient {
 
     }
 
-    public void BroadcastInformation()
+    public void BroadcastInformation(String message)
     {
+        //TODO: Make a bit nicer!, no re-use now..
+        new Thread() {
+            public void run() {
+                Log.d(TAG, "Broadcasting: " + message);
 
+                MulticastSocket socket = null;
+                InetAddress group = null;
+                try {
+                    Log.d(TAG, "Begin send message");
+                    socket = new MulticastSocket(_port);
+                    group = InetAddress.getByName(_ip);
+                    socket.joinGroup(group);
+                    DatagramPacket packet;
+
+                    byte[] buf = message.getBytes();
+                    packet = new DatagramPacket(buf, buf.length, group, _port); //For sending you need to have a group and port set in the packet
+                    Log.d(TAG, "Message length: " + buf.length);
+                    socket.send(packet);
+                    Log.d(TAG, "Message was sent!");
+
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.d(TAG, e.getMessage());
+
+                } finally {
+
+                    if (socket != null) {
+                        try {
+                            if (group != null) {
+                                socket.leaveGroup(group);
+                            }
+                            socket.close();
+                        } catch (IOException e) {
+                            Log.d(TAG, e.getMessage());
+                        }
+                    }
+                }
+            }
+        }.start();
     }
 }

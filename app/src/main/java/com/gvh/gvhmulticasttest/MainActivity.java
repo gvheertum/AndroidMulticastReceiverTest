@@ -81,8 +81,8 @@ public class MainActivity extends AppCompatActivity {
         if(view != null) {
             Snackbar.make(view, "Starting test mode", Snackbar.LENGTH_LONG).show();
         }
-        Log.d(TAG, "Starting receiver from button press");
-        StartReceiver();
+        Log.d(TAG, "Starting test mode");
+        StartTestMode();
     }
 
     private final String CHANNEL_ID = "OCCChan";
@@ -128,12 +128,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
+    private final int MCPortTest = 30022;
+    public void StartTestMode()
+    {
+        StartTestForMCTraffic(MCAddressRf, MCPortTest);
+        StartTestForMCTraffic(MCAddressGeneral, MCPortTest);
+        runOnUiThread(() -> tv.setText("!! Started MC Test on: " + MCAddressRf + " and " + MCAddressGeneral + "on port:" + MCPortTest));
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void StartListeningForMCTraffic(String ip, int port)
     {
         MulticastChannelClient client = _clientFactory.GetClient(ip, port);
         client.StartReceiver((m) -> { runOnUiThread(() -> ProcessMulticastMessage(ip, port, m)); return "DONE"; } );
     }
 
+    //TODO: This might be reusable with code above, the test and client mode has some overlap
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void StartTestForMCTraffic(String ip, int port)
+    {
+        MulticastChannelClient client = _clientFactory.GetClient(ip, port);
+        client.StartReceiver((m) -> { runOnUiThread(() -> ProcessPong(ip, port, m)); return "DONE"; } );
+    }
 
     private void ProcessMulticastMessage(String ip, int port, String multiCastMsg)
     {
@@ -141,6 +157,26 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(MainActivity.this, dispMessage, Toast.LENGTH_SHORT).show();
         NotifyUser(dispMessage);
         AppendMCMessage(dispMessage);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void ProcessPong(String ip, int port, String multiCastMsg)
+    {
+        if(multiCastMsg.startsWith("MCPONG|"))
+        {
+            Log.d(TAG, "This is a pong, so ignore here!");
+        }
+        else if(multiCastMsg.startsWith("MCPING|"))
+        {
+            AppendMCMessage("Received: " + multiCastMsg);
+            String mcString = "MCPONG|" + multiCastMsg.substring(7) + "|Test";
+            AppendMCMessage("Reply: " + mcString);
+            _clientFactory.GetClient(ip, port).BroadcastInformation(mcString); //TODO: Device name must be dynamic
+        }
+        else
+        {
+            AppendMCMessage("Invalid ping received: " + multiCastMsg);
+        }
     }
 
     private String messageContent = "";
