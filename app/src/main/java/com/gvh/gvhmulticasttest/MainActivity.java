@@ -35,7 +35,6 @@ import java.nio.charset.StandardCharsets;
 public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "OCG";
-    public boolean startedMCChannel = false;
     TextView tv = null;
     TextView tvReceivedContent = null;
     @Override
@@ -46,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         FloatingActionButton fab = findViewById(R.id.fab);
         tvReceivedContent = findViewById(R.id.tvReceived);
         tv = findViewById(R.id.tvMcDetail);
-        tv.setText("Click the button to start MC retrieve on: " + MCAddress + ":" + MCPort);
+        tv.setText("Click the button to start MC retrieve");
         createNotificationChannel();
         StartMCChannel(null);
 
@@ -100,20 +99,27 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    private final String MCAddress = "236.99.250.121";
+    private final String MCAddressRf = "236.99.250.121";
+    private final String MCAddressGeneral = "236.99.250.120";
     private final int MCPort = 30011;
     public void StartReceiver()
     {
-        if(this.startedMCChannel) { Log.d(TAG, "Already running"); return; }
+        StartListeningForMCTraffic(MCAddressRf, MCPort);
+        StartListeningForMCTraffic(MCAddressGeneral, MCPort);
+        runOnUiThread(() -> tv.setText("!! Started MC retrieve on: " + MCAddressRf + " and " + MCAddressGeneral + "on port:" + MCPort));
+    }
+
+    private void StartListeningForMCTraffic(String ip, int port)
+    {
         new Thread() {
             public void run() {
                 MulticastSocket socket = null;
                 InetAddress group = null;
 
-                try {
-                    runOnUiThread(() -> tv.setText("!! Started MC retrieve on: " + MCAddress + ":" + MCPort));
-                    socket = new MulticastSocket(MCPort);
-                    group = InetAddress.getByName(MCAddress);
+                try
+                {
+                    socket = new MulticastSocket(port);
+                    group = InetAddress.getByName(ip);
                     socket.joinGroup(group);
 
                     DatagramPacket packet;
@@ -121,14 +127,13 @@ public class MainActivity extends AppCompatActivity {
                         byte[] buf = new byte[256];
                         packet = new DatagramPacket(buf, buf.length);
                         socket.receive(packet);
-                        Log.d(TAG, "Received message");
+                        Log.d(TAG, "Received message on:" + ip + ":" + port);
                         String str = new String(buf, StandardCharsets.UTF_8).substring(0, packet.getLength());
-                        runOnUiThread(() -> ProcessMulticastMessage(str));
+                        runOnUiThread(() -> ProcessMulticastMessage(ip, port, str));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
                     Log.d(TAG, e.getMessage());
-                    startedMCChannel = false;
                 } finally {
                     if (socket != null) {
                         try {
@@ -141,23 +146,20 @@ public class MainActivity extends AppCompatActivity {
                             Log.d(TAG, e.getMessage());
                         }
                     }
-                    startedMCChannel = false;
                     Log.d(TAG, "MC Thread dead yo!");
-                    runOnUiThread(() -> tv.setText("Failed MC retrieve on: " + MCAddress + ":" + MCPort + ", Please restart!"));
+                    runOnUiThread(() -> AppendMCMessage("Failed MC retrieve on: " + port + ":" + port + ", Please restart!"));
                 }
             }
         }.start();
-        this.startedMCChannel = true;
     }
 
 
-
-
-    private void ProcessMulticastMessage(String multiCastMsg)
+    private void ProcessMulticastMessage(String ip, int port, String multiCastMsg)
     {
-        Toast.makeText(MainActivity.this, multiCastMsg, Toast.LENGTH_SHORT).show();
-        NotifyUser(multiCastMsg);
-        AppendMCMessage(multiCastMsg);
+        String dispMessage = ip + ":" + port + "->" + multiCastMsg;
+        Toast.makeText(MainActivity.this, dispMessage, Toast.LENGTH_SHORT).show();
+        NotifyUser(dispMessage);
+        AppendMCMessage(dispMessage);
     }
 
     private String messageContent = "";
@@ -179,11 +181,13 @@ public class MainActivity extends AppCompatActivity {
         Ringtone r = RingtoneManager.getRingtone(this.getApplicationContext(), alarmSound);
         r.play();
 
+        //TODO: Somehow the sound of the notification is still the default messaging sound, so we had to improvise to get the sound working
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.notification_icon_foreground)
                 .setContentTitle("Multicast received")
                 .setContentText(message)
-                .setSound(Uri.parse(urlToAlarm))
+                //.setSound(Uri.parse(urlToAlarm))
                 .setPriority(NotificationCompat.PRIORITY_MAX);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 
