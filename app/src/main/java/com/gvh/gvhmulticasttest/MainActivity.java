@@ -8,6 +8,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings.Secure;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
@@ -33,7 +34,7 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
 
     public MulticastChannelClientFactory _clientFactory = new MulticastChannelClientFactory();
-
+    private String android_id;
     public static final String TAG = "OCG";
     TextView tv = null;
     TextView tvReceivedContent = null;
@@ -49,6 +50,10 @@ public class MainActivity extends AppCompatActivity {
         tv = findViewById(R.id.tvMcDetail);
         tv.setText("Click the button to start MC retrieve");
         createNotificationChannel();
+
+
+        android_id = Secure.getString(this.getApplicationContext().getContentResolver(),
+                Secure.ANDROID_ID);
 
         fabListen.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -128,12 +133,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
+    private final String MCIPTest =  "236.99.250.121";
     private final int MCPortTest = 30022;
     public void StartTestMode()
     {
-        StartTestForMCTraffic(MCAddressRf, MCPortTest);
-        StartTestForMCTraffic(MCAddressGeneral, MCPortTest);
-        runOnUiThread(() -> tv.setText("!! Started MC Test on: " + MCAddressRf + " and " + MCAddressGeneral + "on port:" + MCPortTest));
+        StartTestForMCTraffic(MCIPTest, MCPortTest);
+        runOnUiThread(() -> tv.setText("!! Started MC Test on: " + MCIPTest + "on port:" + MCPortTest + " - Responding as: " + android_id));
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -168,8 +173,9 @@ public class MainActivity extends AppCompatActivity {
         }
         else if(multiCastMsg.startsWith("MCPING|"))
         {
+            ClearMCMessage();
             AppendMCMessage("Received: " + multiCastMsg);
-            String mcString = "MCPONG|" + multiCastMsg.substring(7) + "|Test";
+            String mcString = "MCPONG|" + multiCastMsg.substring(7) + "|" + android_id;
             AppendMCMessage("Reply: " + mcString);
             _clientFactory.GetClient(ip, port).BroadcastInformation(mcString); //TODO: Device name must be dynamic
         }
@@ -183,6 +189,12 @@ public class MainActivity extends AppCompatActivity {
     private void AppendMCMessage(String message)
     {
         messageContent = message + "\r\n" + messageContent;
+        tvReceivedContent.setText(messageContent);
+    }
+
+    private void ClearMCMessage()
+    {
+        messageContent = "";
         tvReceivedContent.setText(messageContent);
     }
 
