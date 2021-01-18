@@ -1,5 +1,6 @@
 package com.gvh.gvhmulticasttest;
 
+import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.media.AudioAttributes;
@@ -35,66 +36,77 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
 
     public MulticastChannelClientFactory _clientFactory = new MulticastChannelClientFactory();
-    private String android_id;
+    public static String AndroidID;
     public static final String TAG = "OCG";
     TextView tv = null;
-    TextView tvReceivedContent = null;
+
     @Override
     @RequiresApi(api = Build.VERSION_CODES.N)
     protected void onCreate(Bundle savedInstanceState) {
+
+        //TODO: Derp... Arrays :D
+        String[] permToNeed = new String[1];
+        permToNeed[0] = Manifest.permission.ACCESS_COARSE_LOCATION;
+        requestPermissions(permToNeed,42);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        InitControlsAndServices();
+    }
 
-        FloatingActionButton fabListen = findViewById(R.id.fabObserve);
-        FloatingActionButton fabTestMode = findViewById(R.id.fabTestMode);
-
-        tvReceivedContent = findViewById(R.id.tvReceived);
+    private void InitControlsAndServices()
+    {
         tv = findViewById(R.id.tvMcDetail);
         tv.setText("Click the button to start MC retrieve");
         createNotificationChannel();
 
-
-        android_id = Secure.getString(this.getApplicationContext().getContentResolver(),
+        AndroidID = Secure.getString(this.getApplicationContext().getContentResolver(),
                 Secure.ANDROID_ID);
-        TextView tvHWId = findViewById(R.id.tvDeviceId);
-        tvHWId.setText(android_id);
+        ((TextView)findViewById(R.id.tvDeviceId)).setText(AndroidID);
 
-        fabListen.setOnClickListener(new View.OnClickListener() {
+        MainActivity self = this;
+
+        //Attach button events
+        findViewById(R.id.fabObserve).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                StartMCChannel(view);
+                if(view != null) {
+                    Snackbar.make(view, "Starting retrieve mode", Snackbar.LENGTH_LONG).show();
+                }
+                Log.d(TAG, "Starting receiver from button press");
+                runOnUiThread(() -> tv.setText("!! Started retrieve mode"));
+                new MulticastTestListener(GetMulticastIp(), GetMulticastPort(), _clientFactory, GetRingtoneUri(), self).Start();
             }
         });
 
-        fabTestMode.setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.fabTestMode).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                StartTestMode(view);
+                if(view != null) {
+                    Snackbar.make(view, "Starting test mode", Snackbar.LENGTH_LONG).show();
+                }
+                Log.d(TAG, "Starting test mode");
+                runOnUiThread(() -> tv.setText("!! Started test mode"));
+                new MulticastTestPingTester(GetMulticastIp(), GetMulticastPort(), _clientFactory, self).Start();
+            }
+        });
+
+        findViewById(R.id.fabStop).setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public void onClick(View view) {
+                if(view != null) {
+                    Snackbar.make(view, "Stopping processes", Snackbar.LENGTH_LONG).show();
+                }
+                Log.d(TAG, "Stopping processes");
+                runOnUiThread(() -> tv.setText("!! Stopped"));
+                _clientFactory.CloseClients();
             }
         });
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private void StartMCChannel(View view)
-    {
-        if(view != null) {
-            Snackbar.make(view, "Starting MC", Snackbar.LENGTH_LONG).show();
-        }
-        Log.d(TAG, "Starting receiver from button press");
-        StartReceiver();
-    }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private void StartTestMode(View view)
-    {
-        if(view != null) {
-            Snackbar.make(view, "Starting test mode", Snackbar.LENGTH_LONG).show();
-        }
-        Log.d(TAG, "Starting test mode");
-        StartTestMode();
-    }
-
-    private final String CHANNEL_ID = "OCCChan";
+    public final String CHANNEL_ID = "OCCChan";
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
@@ -123,70 +135,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    public void StartReceiver()
+    protected Uri GetRingtoneUri()
     {
-        String mcIp = GetMulticastIp();
-        Integer mcPort = GetMulticastPort();
-        StartListeningForMCTraffic(mcIp, mcPort);
-
-        runOnUiThread(() -> tv.setText("!! Started MC retrieve on: " + mcIp + ":" + mcPort));
+        String urlToAlarm = "android.resource://" + getPackageName() + "/" + R.raw.sound1short;
+        Log.d(TAG, urlToAlarm);
+        Uri alarmSound = Uri.parse(urlToAlarm);
+        return alarmSound;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-
-    public void StartTestMode()
-    {
-        String mcIp = GetMulticastIp();
-        Integer mcPort = GetMulticastPort();
-        StartTestForMCTraffic(mcIp, mcPort);
-        runOnUiThread(() -> tv.setText("!! Started MC Test on: " + mcIp + ":" + mcPort));
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private void StartListeningForMCTraffic(String ip, int port)
-    {
-        MulticastChannelClient client = _clientFactory.GetClient(ip, port);
-        client.StartReceiver((m) -> { runOnUiThread(() -> ProcessMulticastMessage(ip, port, m)); return "DONE"; } );
-    }
-
-    //TODO: This might be reusable with code above, the test and client mode has some overlap
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private void StartTestForMCTraffic(String ip, int port)
-    {
-        MulticastChannelClient client = _clientFactory.GetClient(ip, port);
-        client.StartReceiver((m) -> { runOnUiThread(() -> ProcessPong(ip, port, m)); return "DONE"; } );
-    }
-
-    private void ProcessMulticastMessage(String ip, int port, String multiCastMsg)
-    {
-        String dispMessage = ip + ":" + port + "->" + multiCastMsg;
-        Toast.makeText(MainActivity.this, dispMessage, Toast.LENGTH_SHORT).show();
-        NotifyUser(dispMessage);
-        AppendMCMessage(dispMessage);
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private void ProcessPong(String ip, int port, String multiCastMsg)
-    {
-        if(multiCastMsg.startsWith("MCPONG|"))
-        {
-            Log.d(TAG, "This is a pong, so ignore here!");
-        }
-        else if(multiCastMsg.startsWith("MCPING|"))
-        {
-            ClearMCMessage();
-            AppendMCMessage("Received: " + multiCastMsg);
-            String mcString = "MCPONG|" + multiCastMsg.substring(7) + "|" + android_id;
-            AppendMCMessage("Reply: " + mcString);
-            _clientFactory.GetClient(ip, port).BroadcastInformation(mcString); //TODO: Device name must be dynamic
-        }
-        else
-        {
-            AppendMCMessage("Invalid ping received: " + multiCastMsg);
-        }
-    }
 
     private String GetMulticastIp()
     {
@@ -199,48 +155,5 @@ public class MainActivity extends AppCompatActivity {
         EditText tf = findViewById(R.id.editMulticastPort);
         return Integer.parseInt(tf.getText().toString());
     }
-
-    private String messageContent = "";
-    private void AppendMCMessage(String message)
-    {
-        messageContent = message + "\r\n" + messageContent;
-        tvReceivedContent.setText(messageContent);
-    }
-
-    private void ClearMCMessage()
-    {
-        messageContent = "";
-        tvReceivedContent.setText(messageContent);
-    }
-
-    int notificationId = 0;
-    private void NotifyUser(String message)
-    {
-        //Define sound URI
-        //Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-
-        String urlToAlarm = "android.resource://" + getPackageName() + "/" + R.raw.sound1short;
-        Log.d(TAG, urlToAlarm);
-        Uri alarmSound = Uri.parse(urlToAlarm);
-        Ringtone r = RingtoneManager.getRingtone(this.getApplicationContext(), alarmSound);
-        r.play();
-
-        //TODO: Somehow the sound of the notification is still the default messaging sound, so we had to improvise to get the sound working
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.notification_icon_foreground)
-                .setContentTitle("Multicast received")
-                .setContentText(message)
-                //.setSound(Uri.parse(urlToAlarm))
-                .setPriority(NotificationCompat.PRIORITY_MAX);
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-
-
-
-        // notificationId is a unique int for each notification that you must define
-        notificationManager.notify(notificationId, builder.build());
-        notificationId++;
-    }
-
 
 }

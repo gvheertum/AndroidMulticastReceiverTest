@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class MulticastChannelClientFactory
 {
-    public ArrayList<MulticastChannelClient> _multicastClients = new ArrayList<MulticastChannelClient>();
+    private ArrayList<MulticastChannelClient> _multicastClients = new ArrayList<MulticastChannelClient>();
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     public MulticastChannelClient GetClient(String ip, int port)
@@ -28,5 +28,12 @@ public class MulticastChannelClientFactory
         MulticastChannelClient newItem = new MulticastChannelClient(ip, port);
         _multicastClients.add(newItem);
         return newItem;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void CloseClients()
+    {
+        _multicastClients.forEach((e) -> { e.Close(); });
+        _multicastClients = new ArrayList<MulticastChannelClient>();
     }
 }

@@ -20,7 +20,9 @@ public class MulticastChannelClient {
     private String _ip;
     private int _port;
     private boolean _running;
-
+    MulticastSocket socket = null;
+    InetAddress group = null;
+    private Thread thread = null;
     public String GetIP() { return _ip; }
     public int GetPort() { return _port; }
 
@@ -34,10 +36,9 @@ public class MulticastChannelClient {
     public void StartReceiver(Function<String, String> messageReceiveHandler)
     {
         if(_running) { Log.d(TAG, "Already running, ignoring request"); return;}
-        new Thread() {
+        thread = new Thread() {
             public void run() {
-                MulticastSocket socket = null;
-                InetAddress group = null;
+
                 //TODO: This code will open 2 event listeners when executed twice, there should be more sane handling of logic/duplication, but for now meh.
                 //TODO: Having a double message is not that much of a hassle
                 try
@@ -73,15 +74,30 @@ public class MulticastChannelClient {
                         }
                     }
                     Log.d(TAG, "MC Thread dead yo!");
-                    messageReceiveHandler.apply("Failed MC retrieve on: " + _ip + ":" + _port + ", Please restart!"); //TODO: handle the rest and handle already running state
+                    messageReceiveHandler.apply("Failed MC retrieve on: " + _ip + ":" + _port + ", Please restart!");
                 }
             }
-        }.start();
+        };
+        thread.start();
     }
 
-    public void StopReceiver()
+    public void Close()
     {
-
+        Log.d(TAG, "Calling close");
+        if (_running && thread != null && socket != null) {
+            Log.d(TAG, "Is running, so killing it off");
+            try {
+                thread.interrupt();
+                if (group != null) {
+                    socket.leaveGroup(group);
+                }
+                socket.close();
+            }
+            catch(IOException e) {
+                Log.d(TAG, e.getMessage());
+            }
+        }
+        _running = false;
     }
 
     public void BroadcastInformation(String message)
