@@ -30,31 +30,24 @@
 
     <uses-feature android:name="android.telephony.TelephonyManager" />
     <uses-feature android:name="android.hardware.nfc" />
-
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
-
     <uses-feature
         android:name="android.hardware.location"
         android:required="false" />
-
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="false" />
-
     <uses-feature
         android:name="android.hardware.location.network"
         android:required="false" />
-
     <uses-feature
         android:name="android.hardware.sip.voip"
         android:required="true" />
-
     <uses-feature
         android:name="android.hardware.wifi"
         android:required="true" />
-
     <uses-feature
         android:name="android.hardware.microphone"
         android:required="true" />

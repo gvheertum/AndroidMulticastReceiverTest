@@ -21,6 +21,7 @@ import androidx.core.app.NotificationManagerCompat;
 import android.util.Log;
 import android.view.View;
 
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
         FloatingActionButton fabListen = findViewById(R.id.fabObserve);
         FloatingActionButton fabTestMode = findViewById(R.id.fabTestMode);
+
         tvReceivedContent = findViewById(R.id.tvReceived);
         tv = findViewById(R.id.tvMcDetail);
         tv.setText("Click the button to start MC retrieve");
@@ -54,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
 
         android_id = Secure.getString(this.getApplicationContext().getContentResolver(),
                 Secure.ANDROID_ID);
+        TextView tvHWId = findViewById(R.id.tvDeviceId);
+        tvHWId.setText(android_id);
 
         fabListen.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -120,25 +124,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-    private final String MCAddressRf = "236.99.250.121";
-    private final String MCAddressGeneral = "236.99.250.120";
-    private final int MCPort = 30011;
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void StartReceiver()
     {
-        StartListeningForMCTraffic(MCAddressRf, MCPort);
-        StartListeningForMCTraffic(MCAddressGeneral, MCPort);
-        runOnUiThread(() -> tv.setText("!! Started MC retrieve on: " + MCAddressRf + " and " + MCAddressGeneral + "on port:" + MCPort));
+        String mcIp = GetMulticastIp();
+        Integer mcPort = GetMulticastPort();
+        StartListeningForMCTraffic(mcIp, mcPort);
+
+        runOnUiThread(() -> tv.setText("!! Started MC retrieve on: " + mcIp + ":" + mcPort));
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private final String MCIPTest =  "236.99.250.121";
-    private final int MCPortTest = 30022;
+
     public void StartTestMode()
     {
-        StartTestForMCTraffic(MCIPTest, MCPortTest);
-        runOnUiThread(() -> tv.setText("!! Started MC Test on: " + MCIPTest + "on port:" + MCPortTest + " - Responding as: " + android_id));
+        String mcIp = GetMulticastIp();
+        Integer mcPort = GetMulticastPort();
+        StartTestForMCTraffic(mcIp, mcPort);
+        runOnUiThread(() -> tv.setText("!! Started MC Test on: " + mcIp + ":" + mcPort));
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -183,6 +186,18 @@ public class MainActivity extends AppCompatActivity {
         {
             AppendMCMessage("Invalid ping received: " + multiCastMsg);
         }
+    }
+
+    private String GetMulticastIp()
+    {
+        EditText tf = findViewById(R.id.editMulticastIP);
+        return tf.getText().toString();
+    }
+
+    private Integer GetMulticastPort()
+    {
+        EditText tf = findViewById(R.id.editMulticastPort);
+        return Integer.parseInt(tf.getText().toString());
     }
 
     private String messageContent = "";
