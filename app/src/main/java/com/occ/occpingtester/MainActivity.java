@@ -1,39 +1,34 @@
-package com.gvh.gvhmulticasttest;
+package com.occ.occpingtester;
 
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.media.AudioAttributes;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings.Secure;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.FirebaseApp;
+import com.occ.occpingtester.Firebase.FirebaseChannelClientFactory;
+import com.occ.occpingtester.Multicast.MulticastChannelClientFactory;
+import com.occ.occpingtester.Testers.TesterMulticastListener;
+import com.occ.occpingtester.Testers.TesterPingPong;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 
 import android.util.Log;
 import android.view.View;
 
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+
+    public static final String PingTAG = "MCPING|";
+    public static final String PongTAG = "MCPONG|";
 
     public MulticastChannelClientFactory _clientFactory = new MulticastChannelClientFactory();
     public static String AndroidID;
@@ -43,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     @RequiresApi(api = Build.VERSION_CODES.N)
     protected void onCreate(Bundle savedInstanceState) {
+        FirebaseApp.initializeApp(this);
 
         //TODO: Derp... Arrays :D
         String[] permToNeed = new String[1];
@@ -75,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Log.d(TAG, "Starting receiver from button press");
                 runOnUiThread(() -> tv.setText("!! Started retrieve mode"));
-                new MulticastTestListener(GetMulticastIp(), GetMulticastPort(), _clientFactory, GetRingtoneUri(), self).Start();
+                new TesterMulticastListener(GetMulticastIp(), GetMulticastPort(), _clientFactory, GetRingtoneUri(), self).Start();
             }
         });
 
@@ -87,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Log.d(TAG, "Starting test mode");
                 runOnUiThread(() -> tv.setText("!! Started test mode"));
-                new MulticastTestPingTester(GetMulticastIp(), GetMulticastPort(), _clientFactory, self).Start();
+                new TesterPingPong(GetMulticastIp(), GetMulticastPort(), _clientFactory, self).Start();
             }
         });
 
@@ -101,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Stopping processes");
                 runOnUiThread(() -> tv.setText("!! Stopped"));
                 _clientFactory.CloseClients();
+                new FirebaseChannelClientFactory().CloseClients();
             }
         });
     }

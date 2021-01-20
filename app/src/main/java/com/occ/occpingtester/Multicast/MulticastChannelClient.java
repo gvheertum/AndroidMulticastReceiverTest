@@ -1,4 +1,4 @@
-package com.gvh.gvhmulticasttest;
+package com.occ.occpingtester.Multicast;
 
 import android.os.Build;
 import android.util.Log;
@@ -10,9 +10,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 public class MulticastChannelClient {
     private static final String TAG = "MCChannelClient";

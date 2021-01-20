@@ -1,4 +1,4 @@
-package com.gvh.gvhmulticasttest;
+package com.occ.occpingtester.DeviceMetrics;
 
 import android.content.Context
 import android.media.AudioManager

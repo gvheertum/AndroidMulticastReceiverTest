@@ -1,4 +1,4 @@
-package com.gvh.gvhmulticasttest;
+package com.occ.occpingtester.Multicast;
 
 import android.os.Build;
 import android.util.Log;

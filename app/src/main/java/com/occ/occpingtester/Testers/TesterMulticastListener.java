@@ -1,4 +1,4 @@
-package com.gvh.gvhmulticasttest;
+package com.occ.occpingtester.Testers;
 
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -10,10 +10,15 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-public class MulticastTestListener extends MulticastTestBase {
+import com.occ.occpingtester.MainActivity;
+import com.occ.occpingtester.Multicast.MulticastChannelClient;
+import com.occ.occpingtester.Multicast.MulticastChannelClientFactory;
+import com.occ.occpingtester.R;
+
+public class TesterMulticastListener extends TesterBase {
     private Uri _alarmSignal;
 
-    public MulticastTestListener(String ip, int port, MulticastChannelClientFactory clientFactory, Uri alarmSignal,  MainActivity parentActivity) {
+    public TesterMulticastListener(String ip, int port, MulticastChannelClientFactory clientFactory, Uri alarmSignal, MainActivity parentActivity) {
         super(ip, port, clientFactory, parentActivity);
         _alarmSignal = alarmSignal;
     }
@@ -28,11 +33,11 @@ public class MulticastTestListener extends MulticastTestBase {
 
     private void ProcessMulticastMessage(String ip, int port, String multiCastMsg)
     {
-        UpdateLastBeat();
+        UpdateLastBeat(true);
         String dispMessage = ip + ":" + port + "->" + multiCastMsg;
         Toast.makeText(_parentActivity, dispMessage, Toast.LENGTH_SHORT).show();
         NotifyUser(dispMessage);
-        AppendMCMessage(dispMessage);
+        AppendMessageOutput(dispMessage);
     }
 
     int notificationId = 0;

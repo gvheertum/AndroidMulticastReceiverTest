@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "x",
+    "firebase_url": "https://xxxx.firebaseio.com",
+    "project_id": "xxxx",
+    "storage_bucket": "xxx.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:xxx:android:xxx",
+        "android_client_info": {
+          "package_name": "com.occ.multicasttest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "xxxxx",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "xxxxx"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "xxxxx",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
