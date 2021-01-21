@@ -36,9 +36,8 @@ public class MulticastChannelClient {
         if(_running) { Log.d(TAG, "Already running, ignoring request"); return;}
         thread = new Thread() {
             public void run() {
-
+                //TODO: Somehow this code will block when the device is leaving the charging/debug mode (with USB), a restart resolves the issues, but this is at least odd
                 //TODO: This code will open 2 event listeners when executed twice, there should be more sane handling of logic/duplication, but for now meh.
-                //TODO: Having a double message is not that much of a hassle
                 try
                 {
                     socket = new MulticastSocket(_port);
